@@ -66,16 +66,17 @@ namespace jsk_perception
   {
     sub_image_.subscribe(*pnh_, "input", 1);
     sub_mask_.subscribe(*pnh_, "input/mask", 1);
-    sub_camera_info_.subscribe(*pnh_, "input/camera_info", 1);
+    sub_info_ = pnh_->subscribe("input/camera_info", 1,
+                                &ApplyMaskImage::infoCallback, this);
     if (approximate_sync_) {
       async_ = boost::make_shared<message_filters::Synchronizer<ApproximateSyncPolicy> >(queue_size_);
-      async_->connectInput(sub_image_, sub_mask_, sub_camera_info_);
-      async_->registerCallback(boost::bind(&ApplyMaskImage::apply, this, _1, _2, _3));
+      async_->connectInput(sub_image_, sub_mask_);
+      async_->registerCallback(boost::bind(&ApplyMaskImage::apply, this, _1, _2));
     }
     else {
       sync_ = boost::make_shared<message_filters::Synchronizer<SyncPolicy> >(queue_size_);
-      sync_->connectInput(sub_image_, sub_mask_, sub_camera_info_);
-      sync_->registerCallback(boost::bind(&ApplyMaskImage::apply, this, _1, _2, _3));
+      sync_->connectInput(sub_image_, sub_mask_);
+      sync_->registerCallback(boost::bind(&ApplyMaskImage::apply, this, _1, _2));
     }
     ros::V_string names = boost::assign::list_of("~input")("~input/mask");
     jsk_topic_tools::warnNoRemap(names);
@@ -88,13 +89,18 @@ namespace jsk_perception
     sub_camera_info_.unsubscribe();
   }
 
+  void ApplyMaskImage::infoCallback(
+    const sensor_msgs::CameraInfo::ConstPtr& info_msg)
+  {
+    boost::mutex::scoped_lock lock(mutex_);
+    camera_info_ = info_msg;
+  }
+
   void ApplyMaskImage::apply(
     const sensor_msgs::Image::ConstPtr& image_msg,
-    const sensor_msgs::Image::ConstPtr& mask_msg,
-    const sensor_msgs::CameraInfo::ConstPtr& camera_info_msg)
+    const sensor_msgs::Image::ConstPtr& mask_msg)
   {
     vital_checker_->poke();
-    sensor_msgs::CameraInfo roi(*camera_info_msg);
     cv::Mat image;
     if (jsk_recognition_utils::isBGRA(image_msg->encoding)) {
       cv::Mat tmp_image = cv_bridge::toCvShare(image_msg, image_msg->encoding)->image;
@@ -119,17 +125,21 @@ namespace jsk_perception
       cv::bitwise_not(mask, mask);
     }
 
-    if (clip_) {
-      cv::Rect region = jsk_recognition_utils::boundingRectOfMaskImage(mask);
-      mask = mask(region);
-      image = image(region);
+    cv::Rect region = jsk_recognition_utils::boundingRectOfMaskImage(mask);
+    if (camera_info_){
+      sensor_msgs::CameraInfo roi(*camera_info_);
       roi.roi.x_offset = region.x;
       roi.roi.y_offset = region.y;
       roi.roi.width = region.width;
       roi.roi.height = region.height;
       roi.roi.do_rectify = true;
+      pub_camera_info_.publish(roi);
     }
-    pub_camera_info_.publish(roi);
+    if (clip_) {
+      mask = mask(region);
+      image = image(region);
+    }
+
 
     if (negative_ && !negative_before_clip_) {
       cv::bitwise_not(mask, mask);

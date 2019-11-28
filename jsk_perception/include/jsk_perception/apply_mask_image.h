@@ -52,12 +52,10 @@ namespace jsk_perception
   public:
     typedef message_filters::sync_policies::ApproximateTime<
     sensor_msgs::Image,
-    sensor_msgs::Image,
-    sensor_msgs::CameraInfo > ApproximateSyncPolicy;
+    sensor_msgs::Image > ApproximateSyncPolicy;
     typedef message_filters::sync_policies::ExactTime<
     sensor_msgs::Image,
-    sensor_msgs::Image,
-    sensor_msgs::CameraInfo > SyncPolicy;
+    sensor_msgs::Image > SyncPolicy;
     ApplyMaskImage(): DiagnosticNodelet("ApplyMaskImage") {}
   protected:
 
@@ -66,9 +64,9 @@ namespace jsk_perception
     virtual void unsubscribe();
     virtual void apply(
       const sensor_msgs::Image::ConstPtr& image_msg,
-      const sensor_msgs::Image::ConstPtr& mask_msg,
-      const sensor_msgs::CameraInfo::ConstPtr& Camera_Info_msg);
-
+      const sensor_msgs::Image::ConstPtr& mask_msg);
+    virtual void infoCallback(
+      const sensor_msgs::CameraInfo::ConstPtr& info_msg);
     bool approximate_sync_;
     bool clip_;
     bool negative_;
@@ -78,9 +76,12 @@ namespace jsk_perception
     int cval_;
     boost::shared_ptr<message_filters::Synchronizer<SyncPolicy> > sync_;
     boost::shared_ptr<message_filters::Synchronizer<ApproximateSyncPolicy> > async_;
+    boost::mutex mutex_;
+    sensor_msgs::CameraInfo::ConstPtr camera_info_;
     message_filters::Subscriber<sensor_msgs::Image> sub_image_;
     message_filters::Subscriber<sensor_msgs::Image> sub_mask_;
     message_filters::Subscriber<sensor_msgs::CameraInfo> sub_camera_info_;
+    ros::Subscriber sub_info_;
     ros::Publisher pub_image_;
     ros::Publisher pub_mask_;
     ros::Publisher pub_camera_info_;
