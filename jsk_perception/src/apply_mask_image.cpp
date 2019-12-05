@@ -127,19 +127,19 @@ namespace jsk_perception
 
     cv::Rect region = jsk_recognition_utils::boundingRectOfMaskImage(mask);
     if (camera_info_) {
-      sensor_msgs::CameraInfo roi(*camera_info_);
-      roi.header = image_msg->header;
-      roi.roi.x_offset = region.x;
-      roi.roi.y_offset = region.y;
-      roi.roi.width = region.width;
-      roi.roi.height = region.height;
+      sensor_msgs::CameraInfo camera_info(*camera_info_);
+      camera_info.header = image_msg->header;
+      camera_info.roi.x_offset = region.x;
+      camera_info.roi.y_offset = region.y;
+      camera_info.roi.width = region.width;
+      camera_info.roi.height = region.height;
       if (use_rectified_image_) {
-        roi.roi.do_rectify = true;
+        camera_info.roi.do_rectify = true;
       }
       else {
-        roi.roi.do_rectify = false;
+        camera_info.roi.do_rectify = false;
       }
-      pub_camera_info_.publish(roi);
+      pub_camera_info_.publish(camera_info);
     }
     if (clip_) {
       mask = mask(region);
