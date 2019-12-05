@@ -51,6 +51,7 @@ namespace jsk_perception
     pnh_->param("negative", negative_, false);
     pnh_->param("negative/before_clip", negative_before_clip_, true);
     pnh_->param("mask_black_to_transparent", mask_black_to_transparent_, false);
+    pnh_->param("use_rectified_image", use_rectified_image_, true);
     pnh_->param("queue_size", queue_size_, 100);
     pnh_->param("cval", cval_, 0);
     pub_image_ = advertise<sensor_msgs::Image>(
@@ -86,7 +87,6 @@ namespace jsk_perception
   {
     sub_image_.unsubscribe();
     sub_mask_.unsubscribe();
-    sub_camera_info_.unsubscribe();
   }
 
   void ApplyMaskImage::infoCallback(
@@ -126,13 +126,19 @@ namespace jsk_perception
     }
 
     cv::Rect region = jsk_recognition_utils::boundingRectOfMaskImage(mask);
-    if (camera_info_){
+    if (camera_info_) {
       sensor_msgs::CameraInfo roi(*camera_info_);
+      roi.header = image_msg->header;
       roi.roi.x_offset = region.x;
       roi.roi.y_offset = region.y;
       roi.roi.width = region.width;
       roi.roi.height = region.height;
-      roi.roi.do_rectify = true;
+      if (use_rectified_image_) {
+        roi.roi.do_rectify = true;
+      }
+      else {
+        roi.roi.do_rectify = false;
+      }
       pub_camera_info_.publish(roi);
     }
     if (clip_) {

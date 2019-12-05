@@ -72,6 +72,7 @@ namespace jsk_perception
     bool negative_;
     bool negative_before_clip_;
     bool mask_black_to_transparent_;
+    bool use_rectified_image_;
     int queue_size_;
     int cval_;
     boost::shared_ptr<message_filters::Synchronizer<SyncPolicy> > sync_;
