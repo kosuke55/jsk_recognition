@@ -81,6 +81,7 @@ namespace jsk_pcl_ros_utils
     bool approximate_sync_;
     int queue_size_;
     bool static_image_size_;
+    bool rect_mask_;
     int width_;
     int height_;
     boost::shared_ptr<message_filters::Synchronizer<SyncPolicy> >sync_;
