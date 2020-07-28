@@ -46,6 +46,7 @@ namespace jsk_pcl_ros_utils
     pnh_->param("approximate_sync", approximate_sync_, false);
     pnh_->param("queue_size", queue_size_, 100);
     pnh_->param("static_image_size", static_image_size_, false);
+    pnh_->param("rect_mask", rect_mask_, false);
     pub_ = advertise<sensor_msgs::Image>(*pnh_, "output", 1);
     onInitPostProcess();
   }
@@ -88,6 +89,10 @@ namespace jsk_pcl_ros_utils
     const int height)
   {
     cv::Mat mask_image = cv::Mat::zeros(height, width, CV_8UC1);
+    int min_width_index = width - 1;
+    int min_height_index = height - 1;
+    int max_width_index = 0;
+    int max_height_index = 0;
     for (size_t i = 0; i < indices_msg->indices.size(); i++) {
       int index = indices_msg->indices[i];
       if (index >= height * width || index < 0) {
@@ -96,8 +101,32 @@ namespace jsk_pcl_ros_utils
       }
       int width_index = index % width;
       int height_index = index / width;
+      if (min_width_index > width_index){
+        min_width_index = width_index;
+      }
+      if (min_height_index > height_index){
+        min_height_index = height_index;
+      }
+      if (max_width_index < width_index){
+        max_width_index = width_index;
+      }
+      if (max_height_index < height_index){
+        max_height_index = height_index;
+      }
       mask_image.at<uchar>(height_index, width_index) = 255;
     }
+
+    if (rect_mask_)
+    {
+      for (int y = min_height_index; y <= max_height_index; y++)
+      {
+        for (int x = min_width_index; x <= max_width_index; x++)
+        {
+          mask_image.at<uchar>(y, x) = 255;
+        }
+      }
+    }
+
     cv_bridge::CvImage mask_bridge(indices_msg->header,
                                    sensor_msgs::image_encodings::MONO8,
                                    mask_image);
