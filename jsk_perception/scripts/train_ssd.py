@@ -166,6 +166,8 @@ def main():
         return
 
     fg_label_names = train_dataset.fg_class_names
+    train_dataset, test_dataset = chainer.datasets.split_dataset(
+        train_dataset, int(len(train_dataset) * 0.8))
 
     if args.model_name == 'ssd300':
         model = SSD300(
@@ -187,10 +189,10 @@ def main():
         Transform(model.coder, model.insize, model.mean))
     train_iter = chainer.iterators.MultiprocessIterator(train, args.batch_size)
 
-    if (args.dataset_type == 'instance'):
-        test_dataset = DetectionDataset(args.val_dataset_dir)
-    elif (args.dataset_type == 'bbox'):
-        test_dataset = BboxDetectionDataset(args.val_dataset_dir)
+    # if (args.dataset_type == 'instance'):
+    #     test_dataset = DetectionDataset(args.val_dataset_dir)
+    # elif (args.dataset_type == 'bbox'):
+    #     test_dataset = BboxDetectionDataset(args.val_dataset_dir)
 
     test_iter = chainer.iterators.SerialIterator(
         test_dataset, args.batch_size, repeat=False, shuffle=False)
@@ -219,7 +221,7 @@ def main():
     trainer = training.Trainer(
         updater, (args.max_epoch, 'epoch'), out_dir)
     trainer.extend(
-        extensions.ExponentialShift('lr', 0.1, init=1e-3),
+        extensions.ExponentialShift('lr', 0.1, init=1e-4),
         trigger=triggers.ManualScheduleTrigger(step_epoch, 'epoch'))
 
     trainer.extend(
